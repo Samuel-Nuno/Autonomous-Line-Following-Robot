@@ -15,7 +15,7 @@ The course consists of four checkpoints. The starting point to the first checkpo
 ### Our Approach to the Course
 Our robot was designed to complete a line following time trial course by combining encoder based wheel feedback, analog line sensing, and task-based control software. The system was structured to prioritize repeatable behavior and robustness rather than relying on open-loop tuning alone.
 
-We elected to avoid any of the additional costs, since we evaluated that they would take too much time and development time to do reliably and fast enough to be worth it. We use our line following and specific events in our closed loop file that allow us to use line following along with hardcoded movements for the more dynamic movements which are triggered by events where the line is lost.
+We elected to avoid any of the additional bonus cups, since we evaluated that they would take too much time and development time to do reliably and fast enough to be worth it. We use our line following and specific events in our closed loop file that allow us to use line following along with hardcoded movements for the more dynamic movements which are triggered by events where the line is lost.
 
 ## Mechanical and Electrical Design
 The platform is based on the Pololu Romi differential-drive chassis. The robot uses two independently driven wheels, each with its own motor and encoder feedback. In our preliminary design work, we identified several key chassis parameters that informed our control and sensing decisions, including a wheel radius of 35 mm and a track width of 141 mm.
