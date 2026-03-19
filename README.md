@@ -2,7 +2,7 @@
 **Team Members:** Samuel Nuno, Bruce Berg
 
 ## Project Summary
-![Project Summary Image](https://github.com/Samuel-Nuno/Autonomous-Line-Following-Robot/blob/main/Reference%20Documentation/Images/romidims.png)
+![Project Summary Image](https://github.com/Samuel-Nuno/Autonomous-Line-Following-Robot/blob/main/Reference%20Documentation/Images/romi.jpg)
 
 This project documents our ME 405 [Romi](https://www.pololu.com/category/202/romi-chassis-and-accessories) final project, in which we developed a differential-drive robot capable of autonomous line following with closed-loop wheel control, line position estimation, and obstacle-triggered recovery behavior. The goal of the project was to create a robot that could reliably follow the printed course at speed while using organized, reproducible software and clear system documentation.
 
