@@ -31,7 +31,10 @@ The electrical system includes:
 - Motor driver outputs using PWM and direction pins
 
 ### Pinout Diagram
-![Pinout Diagram](PASTE_IMAGE_LINK_HERE)
+![Pinout Diagram](https://github.com/Samuel-Nuno/Autonomous-Line-Following-Robot/blob/main/Reference%20Documentation/Pinout%20Table.pdf)
+
+### Wiring Harnesses
+![Harness Diagram](https://github.com/Samuel-Nuno/Autonomous-Line-Following-Robot/blob/main/Reference%20Documentation/Wiring%20Harness.pdf)
 
 ### Motor and Encoder Interface
 Each motor is controlled by a PWM signal and a direction pin. Encoder feedback is used to estimate wheel speed and wheel position continuously.
