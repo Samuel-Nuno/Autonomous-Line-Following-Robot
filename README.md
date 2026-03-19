@@ -9,7 +9,13 @@ This project documents our ME 405 [Romi](https://www.pololu.com/category/202/rom
 ## Project Objective
 ![Project Objective Image](https://github.com/Samuel-Nuno/Autonomous-Line-Following-Robot/blob/main/Reference%20Documentation/Images/track.jpg)
 
-Our robot was designed to complete the Romi line-following time-trial by combining encoder-based wheel feedback, analog line sensing, and task-based control software. The system was structured to prioritize repeatable behavior and robustness rather than relying on open-loop tuning alone.
+### Course Description
+The course consists of four checkpoints. The starting point to the first checkpoint has a long straightaway where speed should be optimized. After Checkpoint 1, there is a right hand 90 degree turn into the garage, where there is no line to follow. Romi must navigate to the wall of the garage and, using a bump detection method, turn left to get back on the line. After the garage exit, there is a line perpendicular to the path out of the garage on which Romi may choose to turn left and bump a cup out of a position to reduce the overall time by 4 seconds. After the cup, Checkpoint 2 is reached. After Checkpoint 2, there is a slalom section, where Romi must make tight turns and avoid knocking ping pong balls out of position. If a ping pong ball is hit, a time penalty of 2 seconds is applied for each bumped ping pong ball. After the slalom section, Checkpoint 3 is reached. After Checkpoint 3, there is a large right hand turn into a cusp. At the end of the cusp, there is Checkpoint 4. After Checkpoint 4, there is a dotted line leading to an upsidedown cup, which, if knocked out of position, reduces the total time by 4 seconds. At the cusp, there is a turn that requires Romi to turn around and turn to the right to reach the finish line and complete the course.
+
+### Our Approach to the Course
+Our robot was designed to complete a line following time trial course by combining encoder based wheel feedback, analog line sensing, and task-based control software. The system was structured to prioritize repeatable behavior and robustness rather than relying on open-loop tuning alone.
+
+We elected to avoid any of the additional costs, since we evaluated that they would take too much time and development time to do reliably and fast enough to be worth it. We use our line following and specific events in our closed loop file that allow us to use line following along with hardcoded movements for the more dynamic movements which are triggered by events where the line is lost.
 
 ## Mechanical and Electrical Design
 The platform is based on the Pololu Romi differential-drive chassis. The robot uses two independently driven wheels, each with its own motor and encoder feedback. In our preliminary design work, we identified several key chassis parameters that informed our control and sensing decisions, including a wheel radius of 35 mm and a track width of 141 mm.
