@@ -14,7 +14,7 @@ Our robot was designed to complete the Romi line-following time-trial by combini
 ## Mechanical and Electrical Design
 The platform is based on the Pololu Romi differential-drive chassis. The robot uses two independently driven wheels, each with its own motor and encoder feedback. In our preliminary design work, we identified several key chassis parameters that informed our control and sensing decisions, including a wheel radius of 35 mm and a track width of 141 mm.
 
-[Romi Schematic](https://github.com/Samuel-Nuno/Autonomous-Line-Following-Robot/blob/main/Reference%20Documentation/Images/romidims.png)
+![Romi Schematic](https://github.com/Samuel-Nuno/Autonomous-Line-Following-Robot/blob/main/Reference%20Documentation/Images/romidims.png)
 
 The electrical system includes:
 - Two DC drive motors
