@@ -68,6 +68,8 @@ Using the IMU improves accuracy compared to open-loop turning because the robot 
 ## Software Architecture
 The software is organized as a cooperative multitasking system using generators, scheduled by a priority-based task scheduler. Shared variables and queues are used for communication between tasks.
 
+A thorough description of each file can be found in the Source Files section [here]().
+
 ### Main software modules
 - `main.py` initializes hardware, shares, queues, and tasks
 - `cotask.py` implements cooperative task scheduling
