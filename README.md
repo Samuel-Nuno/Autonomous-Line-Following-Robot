@@ -4,7 +4,7 @@
 ## Project Summary
 ![Project Summary Image](PASTE_IMAGE_LINK_HERE)
 
-This project documents our ME 405 Romi final project, in which we developed a differential-drive robot capable of autonomous line following with closed-loop wheel control, line position estimation, and obstacle-triggered recovery behavior. The goal of the project was to create a robot that could reliably follow the printed course at speed while using organized, reproducible software and clear system documentation.
+This project documents our ME 405 [Romi](https://www.pololu.com/category/202/romi-chassis-and-accessories) final project, in which we developed a differential-drive robot capable of autonomous line following with closed-loop wheel control, line position estimation, and obstacle-triggered recovery behavior. The goal of the project was to create a robot that could reliably follow the printed course at speed while using organized, reproducible software and clear system documentation.
 
 ## Project Objective
 ![Project Objective Image](PASTE_IMAGE_LINK_HERE)
@@ -30,15 +30,15 @@ Each motor is controlled by a PWM signal and a direction pin. Encoder feedback i
 
 ## Sensors Used
 
-### Wheel Encoders
+### [Wheel Encoders](https://www.pololu.com/product/3675)
 We used one quadrature encoder per wheel to estimate wheel position and velocity. In software, encoder counts are converted into wheel speed in mm/s.
 
-### Line Sensor Array
-We selected an 8-channel analog Pololu QTR-8A reflectance sensor array. An analog array was chosen because it preserves continuous position information, allowing smoother and more accurate control compared to simple digital threshold sensing.
+### [Line Sensor Array](https://www.pololu.com/product/4248)
+We selected an 8-channel analog Pololu QTR-MD-08A reflectance sensor array. An analog sensor array was chosen because it provides continuous reflectance measurements across all channels, allowing for more precise line position estimation and smoother control compared to digital threshold-based sensors.
 
-The line sensor is calibrated on both white background and black line surfaces. After calibration, the software normalizes each sensor channel and computes a centroid value from 0 to 7 to estimate line position.
+The line sensor is calibrated on both white background and black line surfaces. After calibration, the readings from each channel are normalized, and a weighted centroid is computed (ranging from 0 to 7) to estimate the position of the line relative to the sensor array.
 
-### Bump Sensor
+### [Bump Sensor](https://www.pololu.com/product/1405)
 The bump sensor is implemented as a **single limit switch**. This provides a simple and reliable method of detecting contact with obstacles or walls, allowing the robot to trigger recovery behavior when pressed.
 
 ## Software Architecture
