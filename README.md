@@ -41,6 +41,19 @@ The line sensor is calibrated on both white background and black line surfaces. 
 ### [Bump Sensor](https://www.pololu.com/product/1405)
 The bump sensor is implemented as a **single limit switch**. This provides a simple and reliable method of detecting contact with obstacles or walls, allowing the robot to trigger recovery behavior when pressed.
 
+### [IMU (Inertial Measurement Unit)](https://learn.adafruit.com/adafruit-bno055-absolute-orientation-sensor/overview)
+
+The robot uses a BNO055 IMU to measure orientation, specifically the robot’s heading (yaw angle). The IMU provides absolute heading information, which allows the robot to understand its orientation relative to its starting direction.
+
+Heading data is used primarily during recovery and maneuvering behaviors rather than continuous line following. When the robot performs actions such as turning 90 degrees or reorienting itself after losing the line, the IMU provides feedback to ensure accurate and repeatable rotations.
+
+By monitoring the change in heading, the robot can:
+- execute precise turns (e.g., 90° rotations),
+- maintain consistent orientation during recovery sequences,
+- and avoid relying solely on time-based or open-loop turning.
+
+Using the IMU improves accuracy compared to open-loop turning because the robot can directly measure how far it has rotated rather than estimating based on motor commands alone.
+
 ## Software Architecture
 The software is organized as a cooperative multitasking system using generators, scheduled by a priority-based task scheduler. Shared variables and queues are used for communication between tasks.
 
