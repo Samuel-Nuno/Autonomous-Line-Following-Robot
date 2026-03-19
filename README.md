@@ -7,7 +7,7 @@
 This project documents our ME 405 [Romi](https://www.pololu.com/category/202/romi-chassis-and-accessories) final project, in which we developed a differential-drive robot capable of autonomous line following with closed-loop wheel control, line position estimation, and obstacle-triggered recovery behavior. The goal of the project was to create a robot that could reliably follow the printed course at speed while using organized, reproducible software and clear system documentation.
 
 ## Project Objective
-![Project Objective Image](PASTE_IMAGE_LINK_HERE)
+![Project Objective Image](https://github.com/Samuel-Nuno/Autonomous-Line-Following-Robot/blob/main/Reference%20Documentation/Images/track.jpg)
 
 Our robot was designed to complete the Romi line-following time-trial by combining encoder-based wheel feedback, analog line sensing, and task-based control software. The system was structured to prioritize repeatable behavior and robustness rather than relying on open-loop tuning alone.
 
