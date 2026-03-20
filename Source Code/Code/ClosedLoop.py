@@ -57,11 +57,11 @@ class Closed_Loop:
         self._lf_lost_val = lf_lost_val
 
         # Steering controller
-        self._lf_Kp = 26.0
-        self._lf_Ki = 2.0
+        self._lf_Kp = 30.0
+        self._lf_Ki = 0.0
         self._lf_int = 0.0
-        self._lf_int_decay = 0.0
-        self._lf_dv_slew = 100.0
+        self._lf_int_decay = 0.2
+        self._lf_dv_slew = 180.0
         self._lf_last_dv = 0.0
 
         self._lf_need_lock = True
@@ -69,28 +69,39 @@ class Closed_Loop:
         self._lf_lock_required = 1
         self._lf_prev_enabled = 0
 
-        # ---------------- Garage script ----------------
-        # 0 = not in garage
+        self._cp2_straight_kp = 0.20
+        self._cp2_straight_max = 20.0
+        self._cp2_right_trim = -4.0
+
+        # Garage / CP2 / CP4 script states
+        # 0 = normal line follow
         # 1 = square-up forward
         # 2 = forward into garage
-        # 3 = right turn 90 deg
+        # 3 = right turn 90 deg in garage
         # 4 = forward to wall with encoder straightening
-        # 5 = left-turn search for line
+        # 5 = hardcoded left turn at wall
+        # 6 = drive straight from garage exit toward CP#2
+        # 7 = scripted right turn at CP#2
+        # 8 = slow forward reacquire onto slalom line
+        # 9 = CP#4 short forward into turnaround
+        # 10 = CP#4 rotate 180 deg
+        # 11 = CP#4 slow forward reacquire onto return line
+        # 12 = CP#4 small right bias to choose path toward CP#5
         self._garage_state = 0
 
         self._garage_lost_count = 0
-        self._garage_lost_needed = 6   # 6*20ms = 120 ms lost-line confirmation
+        self._garage_lost_needed = 6   
 
         self._seg_start_L = 0
         self._seg_start_R = 0
 
-        # tuning
+        # Garage tuning
         self._garage_squareup_counts = 325
         self._garage_fwd1_counts = 1015
         self._garage_wall_max_counts = 4062
-        self._garage_turn90_counts = 800
+        self._garage_turn90_counts = 815
 
-        self._garage_fwd_speed = 95.0
+        self._garage_fwd_speed = 150.0
         self._garage_turn_speed = 85.0
 
         # Straight-to-wall correction
@@ -98,11 +109,40 @@ class Closed_Loop:
         self._garage_straight_max = 18.0
         self._garage_right_trim = -4.0
 
-        # Left-turn line reacquire
+        # Hardcoded left turn at the wall
         self._garage_left_turn_speed = 80.0
-        self._garage_found_count = 0
-        self._garage_found_needed = 3   # require a few consecutive valid reads
-        self._garage_left_search_max_counts = 1400  # safety cap
+        self._garage_left_turn_counts = 780
+
+        # CP#2 scripted move
+        self._cp2_fwd_counts = 2500
+        self._cp2_fwd_speed = 95.0
+
+        self._cp2_turn_counts = 770
+        self._cp2_turn_speed = 80.0
+
+        self._cp2_reacquire_speed = 75.0
+        self._cp2_reacquire_max_counts = 700
+        self._cp2_seen_count = 0
+        self._cp2_seen_needed = 3
+
+        # CP#4 turnaround (180 deg turn)
+        self._cp4_fwd_counts = 250
+        self._cp4_turn180_counts = 1500
+        self._cp4_turn_speed = 85.0
+        self._cp4_reacquire_speed = 75.0
+        self._cp4_reacquire_max_counts = 700
+        self._cp4_seen_count = 0
+        self._cp4_seen_needed = 3
+
+        # CP#4 toward CP#5
+        self._cp4_right_bias_counts = 200
+        self._cp4_right_bias_speed = 75.0
+        self._cp4_right_bias_fwd_counts = 500
+
+        # Course progress flags 
+        self._garage_done = False
+        self._cp2_done = False
+        self._cp4_done = False
 
     def _slew(self, target, last, step):
         if target > last + step:
@@ -150,7 +190,25 @@ class Closed_Loop:
     def _start_garage_script(self):
         self._garage_state = 1
         self._garage_lost_count = 0
-        self._garage_found_count = 0
+        self._cp2_seen_count = 0
+        self._mark_segment_start()
+
+        self._reset_line_lock()
+        self._intL = 0.0
+        self._intR = 0.0
+
+    def _start_cp2_script(self):
+        self._cp2_seen_count = 0
+        self._garage_state = 6
+        self._mark_segment_start()
+
+        self._reset_line_lock()
+        self._intL = 0.0
+        self._intR = 0.0
+
+    def _start_cp4_script(self):
+        self._cp4_seen_count = 0
+        self._garage_state = 9
         self._mark_segment_start()
 
         self._reset_line_lock()
@@ -160,10 +218,10 @@ class Closed_Loop:
     def _exit_garage_to_line_follow(self):
         self._garage_state = 0
         self._garage_lost_count = 0
-        self._garage_found_count = 0
+        self._cp2_seen_count = 0
+        self._cp4_seen_count = 0
         self._mark_segment_start()
 
-        # Hand back cleanly to line follow
         self._reset_line_lock()
         self._intL = 0.0
         self._intR = 0.0
@@ -184,7 +242,11 @@ class Closed_Loop:
                 self._lf_prev_enabled = 0
                 self._garage_state = 0
                 self._garage_lost_count = 0
-                self._garage_found_count = 0
+                self._cp2_seen_count = 0
+                self._cp4_seen_count = 0
+                self._garage_done = False
+                self._cp2_done = False
+                self._cp4_done = False
 
             elif self._state == S1_CMP:
 
@@ -197,10 +259,34 @@ class Closed_Loop:
 
                 lf_now = 1 if use_line_follow else 0
                 if lf_now == 1 and self._lf_prev_enabled == 0:
+                    # Full course reset on each new user button press
                     self._reset_line_lock()
+
                     self._garage_state = 0
                     self._garage_lost_count = 0
-                    self._garage_found_count = 0
+                    self._cp2_seen_count = 0
+                    self._cp4_seen_count = 0
+
+                    self._garage_done = False
+                    self._cp2_done = False
+                    self._cp4_done = False
+
+                    self._mark_segment_start()
+
+                    self._intL = 0.0
+                    self._intR = 0.0
+                    self._last_spL = 0.0
+                    self._last_spR = 0.0
+
+                    if self._spL is not None:
+                        self._spL.put(0)
+                    if self._spR is not None:
+                        self._spR.put(0)
+                    if self._effL is not None:
+                        self._effL.put(0)
+                    if self._effR is not None:
+                        self._effR.put(0)
+
                 self._lf_prev_enabled = lf_now
 
                 if not use_line_follow:
@@ -215,7 +301,7 @@ class Closed_Loop:
                     if self._bump is not None:
                         bump_pressed = (self._bump.get() != 0)
 
-                    # ---------------- Garage script ----------------
+                    # Scripted states 
                     if self._garage_state == 1:
                         # square-up forward
                         spL = int(self._garage_fwd_speed)
@@ -240,7 +326,7 @@ class Closed_Loop:
 
                     elif self._garage_state == 3:
                         # right turn 90 deg in place
-                        spL =  int(self._garage_turn_speed)
+                        spL = int(self._garage_turn_speed)
                         spR = -int(self._garage_turn_speed)
 
                         if self._segment_counts() >= self._garage_turn90_counts:
@@ -255,7 +341,6 @@ class Closed_Loop:
                         e_straight = dL - dR
 
                         corr = self._garage_straight_kp * e_straight
-
                         if corr > self._garage_straight_max:
                             corr = self._garage_straight_max
                         elif corr < -self._garage_straight_max:
@@ -267,40 +352,161 @@ class Closed_Loop:
 
                         if bump_pressed or (self._segment_counts() >= self._garage_wall_max_counts):
                             self._garage_state = 5
-                            self._garage_found_count = 0
                             self._mark_segment_start()
                             self._intL = 0.0
                             self._intR = 0.0
 
                     elif self._garage_state == 5:
-                        # rotate left until the line is seen again
+                        # hardcoded left turn at the wall
                         spL = -int(self._garage_left_turn_speed)
                         spR =  int(self._garage_left_turn_speed)
 
-                        if c != self._lf_lost_val:
-                            self._garage_found_count += 1
-                        else:
-                            self._garage_found_count = 0
+                        if self._segment_counts() >= self._garage_left_turn_counts:
+                            self._start_cp2_script()
+                            spL = 0
+                            spR = 0
 
-                        if self._garage_found_count >= self._garage_found_needed:
+                    elif self._garage_state == 6:
+                        # drive straight using encoder correction 
+                        dL, dR = self._segment_lr_counts()
+                        e_straight = dL - dR
+
+                        corr = self._cp2_straight_kp * e_straight
+
+                        if corr > self._cp2_straight_max:
+                            corr = self._cp2_straight_max
+                        elif corr < -self._cp2_straight_max:
+                            corr = -self._cp2_straight_max
+
+                        base = self._cp2_fwd_speed
+
+                        spL = int(base - corr)
+                        spR = int(base + corr + self._cp2_right_trim)
+
+                        if self._segment_counts() >= self._cp2_fwd_counts:
+                            self._garage_state = 7
+                            self._mark_segment_start()
+                            self._intL = 0.0
+                            self._intR = 0.0
+
+                    elif self._garage_state == 7:
+                        # right turn at CP#2
+                        spL = int(self._cp2_turn_speed)
+                        spR = -int(self._cp2_turn_speed)
+
+                        if self._segment_counts() >= self._cp2_turn_counts:
+                            self._garage_state = 8
+                            self._cp2_seen_count = 0
+                            self._mark_segment_start()
+                            self._intL = 0.0
+                            self._intR = 0.0
+
+                    elif self._garage_state == 8:
+                        # slow forward reacquire onto slalom line
+                        spL = int(self._cp2_reacquire_speed)
+                        spR = int(self._cp2_reacquire_speed)
+
+                        if c != self._lf_lost_val:
+                            self._cp2_seen_count += 1
+                        else:
+                            self._cp2_seen_count = 0
+
+                        if self._cp2_seen_count >= self._cp2_seen_needed:
+                            if self._lf_v is not None:
+                                self._lf_v.put(105.0)   # slalom speed
+                            self._garage_done = True
+                            self._cp2_done = True
                             self._exit_garage_to_line_follow()
                             spL = 0
                             spR = 0
 
-                        elif self._segment_counts() >= self._garage_left_search_max_counts:
-                            # safety fallback: stop searching if it spins too long
+                        elif self._segment_counts() >= self._cp2_reacquire_max_counts:
+                            spL = 0
+                            spR = 0
+
+                    elif self._garage_state == 9:
+                        # CP#4 short forward into turnaround
+                        spL = int(self._cp4_reacquire_speed)
+                        spR = int(self._cp4_reacquire_speed)
+
+                        if self._segment_counts() >= self._cp4_fwd_counts:
+                            self._garage_state = 10
+                            self._mark_segment_start()
+                            self._intL = 0.0
+                            self._intR = 0.0
+
+                    elif self._garage_state == 10:
+                        # CP#4 rotate 180 degrees
+                        spL = int(self._cp4_turn_speed)
+                        spR = -int(self._cp4_turn_speed)
+
+                        if self._segment_counts() >= self._cp4_turn180_counts:
+                            self._garage_state = 11
+                            self._cp4_seen_count = 0
+                            self._mark_segment_start()
+                            self._intL = 0.0
+                            self._intR = 0.0
+
+                    elif self._garage_state == 11:
+                        # CP#4 slow forward reacquire onto return line
+                        spL = int(self._cp4_reacquire_speed)
+                        spR = int(self._cp4_reacquire_speed)
+
+                        if c != self._lf_lost_val:
+                            self._cp4_seen_count += 1
+                        else:
+                            self._cp4_seen_count = 0
+
+                        if self._cp4_seen_count >= self._cp4_seen_needed:
+                            self._garage_state = 12
+                            self._mark_segment_start()
+                            self._intL = 0.0
+                            self._intR = 0.0
+                            spL = 0
+                            spR = 0
+
+                        elif self._segment_counts() >= self._cp4_reacquire_max_counts:
+                            spL = 0
+                            spR = 0
+
+                    elif self._garage_state == 12:
+                        # CP#4: go forward a little, then arc gently right toward CP#5
+                        seg_counts = self._segment_counts()
+
+                        if seg_counts < self._cp4_right_bias_fwd_counts:
+                            # short forward move first
+                            spL = int(self._cp4_reacquire_speed)
+                            spR = int(self._cp4_reacquire_speed)
+
+                        else:
+                            # gentle forward-right arc
+                            spL = int(self._cp4_right_bias_speed)
+                            spR = int(0.65 * self._cp4_right_bias_speed)
+
+                        if seg_counts >= (self._cp4_right_bias_fwd_counts + self._cp4_right_bias_counts):
+                            self._cp4_done = True
+                            self._exit_garage_to_line_follow()
                             spL = 0
                             spR = 0
 
                     else:
-                        # ---------------- Normal line follow ----------------
+                        # Normal line follow
                         if c == self._lf_lost_val:
                             self._garage_lost_count += 1
 
                             if self._garage_lost_count >= self._garage_lost_needed:
-                                self._start_garage_script()
-                                spL = int(self._garage_fwd_speed)
-                                spR = int(self._garage_fwd_speed)
+                                if not self._garage_done:
+                                    self._start_garage_script()
+                                    spL = int(self._garage_fwd_speed)
+                                    spR = int(self._garage_fwd_speed)
+                                elif self._cp2_done and not self._cp4_done:
+                                    self._start_cp4_script()
+                                    spL = int(self._cp4_reacquire_speed)
+                                    spR = int(self._cp4_reacquire_speed)
+                                else:
+                                    self._reset_line_lock()
+                                    spL = int(0.6 * v)
+                                    spR = int(0.6 * v)
                             else:
                                 self._reset_line_lock()
                                 spL = int(0.6 * v)
@@ -331,8 +537,9 @@ class Closed_Loop:
                                             self._lf_int =  i_max
                                         if self._lf_int < -i_max:
                                             self._lf_int = -i_max
-
-                                    dv_target = -(self._lf_Kp * e + self._lf_Ki * self._lf_int)
+                                        dv_target = -(self._lf_Kp * e + self._lf_Ki * self._lf_int)
+                                    else:
+                                        dv_target = -(self._lf_Kp * e)
 
                             if dv_target > self._lf_dv_turn:
                                 dv_target = self._lf_dv_turn
@@ -348,7 +555,7 @@ class Closed_Loop:
                     self._spL.put(spL)
                     self._spR.put(spR)
 
-                # ---------------- Motor velocity PI control ----------------
+                # Motor velocity PI control 
                 vL = self._vL.get()
                 vR = self._vR.get()
 
