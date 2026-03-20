@@ -250,11 +250,11 @@ class task_user:
                         self._state = S5_SET_SP_L
 
                     elif self._cmd == "g":
-                        # READ current setpoints from shares
+                        # Read current setpoints from shares
                         self._targetL = self._setpointL.get()
                         self._targetR = self._setpointR.get()
 
-                        # Prevent a "step" to zero that looks like nothing is happening
+                        # Prevent a step to zero that looks like nothing is happening
                         if (abs(self._targetL) < 1e-6) and (abs(self._targetR) < 1e-6):
                             self._w("\r\nSetpoints are 0. Use 's' to enter nonzero setpoints, then press 'g'.\r\n>: ")
                             self._state = S2_CMD
@@ -349,7 +349,7 @@ class task_user:
                             self._w(">: ")
 
                     elif self._cmd == "z":
-                        # Reset the observer state (best) + reset local x/y accumulator
+                        # Reset the observer state + reset local x/y accumulator
                         if self._est_task is not None:
                             try:
                                 self._est_task.reset()
