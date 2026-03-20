@@ -127,7 +127,7 @@ Its main responsibilities are:
 The bump state is used by the closed-loop controller during garage recovery behavior.
 
 ### FSM
-*[Insert task_bump FSM image here]*
+![Insert task_bump FSM image here](https://github.com/Samuel-Nuno/Autonomous-Line-Following-Robot/blob/main/Reference%20Documentation/Images/Task_Bump.png)
 
 ---
 
