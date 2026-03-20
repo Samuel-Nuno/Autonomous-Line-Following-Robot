@@ -148,7 +148,7 @@ Its main responsibilities are:
 This task is useful for orientation measurement and future closed-loop heading control.
 
 ### FSM
-*[Insert task_imu_heading FSM image here]*
+![Insert task_imu_heading FSM image here](https://github.com/Samuel-Nuno/Autonomous-Line-Following-Robot/blob/main/Reference%20Documentation/Images/Task_IMU_Heading.png)
 
 ---
 
@@ -167,7 +167,7 @@ Its main responsibilities are:
 This task isolates line detection from the main closed-loop controller and keeps the design modular.
 
 ### FSM
-*[Insert task_line_sensor FSM image here]*
+![Insert task_line_sensor FSM image here](https://github.com/Samuel-Nuno/Autonomous-Line-Following-Robot/blob/main/Reference%20Documentation/Images/Task_Line_Sensor.png)
 
 ---
 
