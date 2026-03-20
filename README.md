@@ -52,6 +52,8 @@ The line sensor is calibrated on both white background and black line surfaces. 
 ### [Bump Sensor](https://www.pololu.com/product/1405)
 The bump sensor is implemented as a **single limit switch**. This provides a simple and reliable method of detecting contact with obstacles or walls, allowing the robot to trigger recovery behavior when pressed.
 
+The bump sensor was mounted with a custom 3D printed part. The file can be found [here.]()
+
 ### [IMU (Inertial Measurement Unit)](https://learn.adafruit.com/adafruit-bno055-absolute-orientation-sensor/overview)
 
 The robot uses a BNO055 IMU to measure orientation, specifically the robot’s heading (yaw angle). The IMU provides absolute heading information, which allows the robot to understand its orientation relative to its starting direction.
