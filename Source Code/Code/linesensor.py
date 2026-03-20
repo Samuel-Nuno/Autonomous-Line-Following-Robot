@@ -21,11 +21,9 @@ class linesensor:
         # Positions (0..7)
         self._pos = list(range(8))
 
-        # ---- Robustness knobs ----
-        # If sum(norm) is below this, treat as "no line" (prevents bogus centroid at startup/off-line)
+        # prevents bogus centroid at startup/off-line
         self.min_strength = 0.40
 
-        # If a sensor's calibration span is tiny, it will be noisy; ignore it
         self.min_span = 30  # ADC counts; tune 20-150 depending on noise
 
     def read_raw(self):
@@ -93,7 +91,7 @@ class linesensor:
 
         s = sum(w)
 
-        # Stronger gating than your old 1e-6
+        # Stronger gating than 1e-6
         if s < self.min_strength:
             return None
 
@@ -108,7 +106,6 @@ class linesensor:
         w = self.norm_from_raw(raw)
         return self.centroid_from_norm(w)
 
-    # Optional: nice for debugging prints (raw/norm/centroid all from one sample)
     def read_all(self):
         raw = self.read_raw()
         norm = self.norm_from_raw(raw)
