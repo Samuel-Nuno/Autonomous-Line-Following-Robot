@@ -1,105 +1,399 @@
-# Task-Level Software Documentation
+# ME405 Romi Robot Control System
 
-## High-Level Overview
-The robot software is organized as a cooperative multitasking system using a priority-based scheduler. Each subsystem (motor control, sensing, user interface, etc.) is implemented as an independent task. Tasks communicate using shared variables (shares) and queues to ensure modularity and non-blocking execution.
+## High Level Overview
+This project implements a cooperative multitasking control system for a Romi robot using MicroPython. The robot uses multiple concurrent tasks to read sensors, control both motors, follow a line, and interact with the user through a serial interface.
 
-At runtime:
-- The scheduler repeatedly calls each task based on priority and timing
-- Tasks update sensors, compute control actions, and send commands
-- Shared variables and queues allow safe communication between tasks
+At a high level, the system works as follows:
+- The **main file** creates all shares, queues, and task objects
+- The **drive system tasks** read encoders and apply motor effort
+- The **closed loop task** performs PI velocity control and line-following logic
+- The **line sensor task** computes the line centroid
+- The **bump task** detects physical contact with an obstacle
+- The **IMU heading task** reads robot heading and yaw rate
+- The **user task** provides a serial command interface for tuning and testing
+- The **ME405 cotask/task_share libraries** handle task scheduling and safe inter-task communication
 
-This structure allows simultaneous operation of sensing, control, and decision-making without using interrupts or threads.
+This design separates sensing, control, and user interaction into modular finite state machines that communicate through shared variables and queues.
+
+---
 
 ## Task Diagram
-![Task Diagram](PASTE_TASK_DIAGRAM_IMAGE_HERE)
+*[Insert task diagram image here]*
 
 ---
 
-## Shared Data Table
+## Main File Overview
+The `main.py` file is responsible for setting up the entire robot software system. It:
+- Creates all shared variables (`Share`) and data buffers (`Queue`)
+- Initializes default values such as gains, setpoints, and sensor outputs
+- Creates each task object
+- Adds each task to the scheduler with a priority and execution period
+- Continuously runs the priority scheduler inside the main loop
 
-| Data Name | Data Type | Share / Queue | Description |
-|----------|----------|--------------|------------|
-| line_position | float/int | Share | line centroid |
-| line_valid | bool | Share | line detected |
-| bump_state | bool | Share | bump pressed |
-| left_velocity | float | Share | left speed |
-| right_velocity | float | Share | right speed |
-| left_setpoint | float | Share | left target |
-| right_setpoint | float | Share | right target |
-| imu_heading | float | Share | robot heading |
-| user_command | string/int | Queue | user input |
+The file defines shares for:
+- left and right motor enable flags
+- left and right velocity setpoints
+- left and right measured velocities
+- left and right encoder positions
+- left and right control efforts
+- PI controller gains
+- line-following enable, speed, and centroid
+- bump sensor state
 
----
-
-## Task Descriptions and FSMs
-
-### Task: Scheduler / Main Task
-#### Overview
-The main task is responsible for setting up the entire software system before normal robot operation begins. It initializes the hardware interfaces, configures pins and timers, creates the shared variables and queues used for inter-task communication, and instantiates each task object with its assigned priority and execution period. Once initialization is complete, the main section starts the cooperative scheduler, which repeatedly runs each task at the appropriate time. In this way, the main task acts as the entry point and system organizer for the entire robot program.
+The file also creates queues for logged time, velocity, and line centroid data. Once all tasks are created, they are appended to the task list and scheduled with `task_list.pri_sched()`.
 
 ---
 
-### Task: Line Sensor Task
-#### Overview
-The line sensor task is responsible for reading the analog reflectance sensor array and converting the raw sensor values into useful line-position information for the controller. It manages sensor calibration on both light and dark surfaces, normalizes the sensor readings so they can be compared consistently, and computes a weighted centroid that estimates the position of the line across the array. This task also determines whether a valid line is currently detected, which is important for both normal line following and loss-of-line recovery behavior. By isolating all line-sensing operations in one task, the rest of the system can use a clean and consistent line-position signal without needing to process raw sensor data directly.
+# Tasks
 
-#### Finite State Machine
-![Line Sensor FSM](PASTE_FSM_IMAGE_HERE)
+## Left and Right drivesystem file
 
----
+### Overview
+The left and right drive system files implement the motor-side tasks for each wheel. These tasks are responsible for:
+- reading the encoder every cycle
+- computing wheel position and wheel velocity
+- writing measured velocity to a shared variable
+- writing encoder position to a shared variable
+- reading the desired control effort from the closed-loop controller
+- applying motor effort to the physical motor driver
+- logging time and velocity data into queues for later display
 
-### Task: Closed Loop Control Task
-#### Overview
-The closed-loop control task serves as the main decision-making and motion-control task for the robot. It reads the latest sensor information, including line position, wheel-speed feedback, bump status, and recovery conditions, and uses that information to compute the motor commands needed for autonomous behavior. During normal operation, it applies PI control to regulate left and right wheel velocities while also using the line-position error to generate smooth steering corrections for line following. This task is also responsible for detecting when the line has been lost and switching into scripted recovery behavior, such as driving forward, turning, and searching until the line is found again. Because it combines motion control with behavior logic, this task is central to how the robot reacts to both expected path-following conditions and off-nominal events.
+These two files are nearly identical in structure, but they use different hardware pins and timers for the left and right motors.
 
-#### Finite State Machine
-![Closed Loop FSM](PASTE_FSM_IMAGE_HERE)
-
----
-
-### Task: Left Drive System
-#### Overview
-The left drive system task manages the complete low-level operation of the left wheel. It updates the encoder reading to determine wheel position and velocity, applies the commanded motor effort through the motor driver, and provides current feedback values to the rest of the software through shared data. This task ensures that the left side of the drivetrain responds consistently to controller commands and that accurate motion information is always available for closed-loop control. By separating the left wheel into its own task, the software remains modular and allows left-side sensing and actuation to be handled independently from the rest of the robot.
-
-#### Finite State Machine
-![Left Drive FSM](PASTE_FSM_IMAGE_HERE)
+### FSM
+*[Insert Left/Right Drive System FSM image here]*
 
 ---
 
-### Task: Right Drive System
-#### Overview
-The right drive system task performs the same role for the right wheel that the left drive system task performs for the left. It continuously updates the encoder measurement for the right side, determines the wheel’s current position and velocity, and applies the requested motor command through the motor driver hardware. The measured motion data is then shared with the control system so that wheel-speed regulation and straight-line behavior can be maintained. Keeping the right drivetrain logic in a dedicated task makes the code easier to test, debug, and tune, especially when comparing the performance of the two sides of the robot.
+## Closed Loop file
 
-#### Finite State Machine
-![Right Drive FSM](PASTE_FSM_IMAGE_HERE)
+### Overview
+The `ClosedLoop.py` file contains the main controller for the robot. This task performs the closed-loop velocity control for both motors and also contains the higher-level line-following behavior.
 
----
+Its main responsibilities are:
+- reading left and right setpoints
+- reading measured left and right wheel velocities
+- computing velocity error for each wheel
+- applying PI control to generate motor effort commands
+- saturating the output effort to safe limits
+- resetting integrators when setpoints change significantly
+- supporting line-following operation by converting centroid error into left/right wheel setpoints
+- handling lost-line behavior through a multi-step garage recovery script
 
-### Task: Bump Sensor Task
-#### Overview
-The bump sensor task monitors the robot’s single limit switch and converts its physical contact state into a software signal that can be used by higher-level control logic. Its purpose is to detect when the robot has made contact with an obstacle, wall, or other boundary condition that requires a response. The task updates the shared bump-state variable so the controller can quickly react, such as by interrupting normal line following and entering a recovery or repositioning sequence. Since switch inputs can change rapidly, this task also provides a clean and isolated way to handle repeated sampling of the sensor without mixing that logic into the main controller.
+When line following is enabled, the controller does not simply use externally supplied setpoints. Instead, it uses the line centroid and desired forward speed to generate left and right setpoints automatically. If the line is lost for long enough, the controller enters a scripted recovery routine that drives forward, turns, and searches for the line again.
 
-#### Finite State Machine
-![Bump FSM](PASTE_FSM_IMAGE_HERE)
-
----
-
-### Task: IMU Heading Task
-#### Overview
-The IMU heading task reads orientation data from the BNO055 inertial measurement unit and updates the robot’s heading information for use by the rest of the system. Its main role is to provide an absolute or incremental measure of yaw so the robot can determine how far it has turned during maneuvers. This is especially useful during recovery routines and heading-based turns, where accurate rotation is needed and time-based open-loop turning would be less reliable. By assigning IMU processing to its own task, heading measurements can be updated regularly and made available to control logic without cluttering the main behavioral code.
-
-#### Finite State Machine
-![IMU FSM](PASTE_FSM_IMAGE_HERE)
+### FSM
+*[Insert Closed Loop FSM image here]*
 
 ---
 
-### Task: User Interface Task
-#### Overview
-The user interface task provides a way for the operator to interact with the robot through the serial terminal. It is used for testing, debugging, and tuning by receiving user commands and displaying useful system information such as sensor readings, control states, or performance data. This task makes it easier to adjust parameters, trigger behaviors, or monitor the robot during development without changing the main control structure. By isolating terminal interaction in its own task, the robot can support debugging and user commands while still maintaining organized real-time operation across the rest of the software.
+## Task_User File
 
-#### Finite State Machine
-![User FSM](PASTE_FSM_IMAGE_HERE)
+### Overview
+The `task_user.py` file implements the user interface task. It communicates with a PC through USB serial and allows the user to interact with the robot at runtime.
+
+This task allows the user to:
+- print a help menu
+- calibrate the line sensor on white and black surfaces
+- set new proportional and integral gains
+- set new left and right wheel setpoints
+- enable or disable line following
+- enter a line-following base velocity
+- print raw and normalized line sensor values
+- trigger a step response and print logged data
+- emergency stop the robot
+- print estimated pose values if estimator shares are connected
+- reset pose values if an estimator task is connected
+
+The user task is the main tuning and debugging interface for the robot.
+
+### FSM
+*[Insert Task_User FSM image here]*
 
 ---
 
+## task_bump
 
+### Overview
+The `task_bump.py` file reads the bump sensor and publishes a debounced pressed/not-pressed result to a shared variable.
+
+Its main responsibilities are:
+- configuring the bump input pin
+- handling either active-low or active-high wiring
+- sampling the bump signal periodically
+- debouncing the switch input over several samples
+- publishing a stable bump state to a shared variable
+
+The bump state is used by the closed-loop controller during garage recovery behavior.
+
+### FSM
+*[Insert task_bump FSM image here]*
+
+---
+
+## task_imu_heading
+
+### Overview
+The `task_IMU_heading.py` file manages heading measurements from the BNO055 IMU. It initializes the IMU, stores a zero-heading reference, and continuously publishes heading and yaw rate.
+
+Its main responsibilities are:
+- initializing the I2C interface and IMU driver
+- setting the BNO055 operating mode
+- reading the absolute heading from the IMU
+- subtracting the startup heading to create a relative heading
+- reading yaw rate from the gyro
+- writing heading and heading rate to shared variables
+- allowing the heading reference to be reset
+
+This task is useful for orientation measurement and future closed-loop heading control.
+
+### FSM
+*[Insert task_imu_heading FSM image here]*
+
+---
+
+## task_line_sensor
+
+### Overview
+The `task_line_sensor.py` file reads the 8-channel line sensor and computes the line centroid used for line following.
+
+Its main responsibilities are:
+- creating the line sensor driver object
+- reading the line only when line following is enabled
+- computing the centroid position from calibrated sensor values
+- outputting a centroid value from 0 to 7 when a line is found
+- outputting `-1.0` when no valid line is detected
+
+This task isolates line detection from the main closed-loop controller and keeps the design modular.
+
+### FSM
+*[Insert task_line_sensor FSM image here]*
+
+---
+
+# Drivers
+
+## Encoder
+
+### Overview
+The `encoder.py` file implements a quadrature encoder interface. It uses a hardware timer in encoder mode to track wheel position and wheel speed.
+
+### What it sets up
+The encoder driver sets up:
+- a hardware timer in encoder mode
+- channel A and channel B encoder inputs
+- internal variables for position, previous count, delta count, and elapsed time
+
+### What data it takes in
+The driver takes in:
+- a timer number
+- a pin for encoder channel A
+- a pin for encoder channel B
+
+### Methods
+- `__init__(tim, chA_pin, chB_pin)`  
+  Creates the encoder object, initializes the timer in encoder mode, and prepares all internal variables.
+
+- `update()`  
+  Reads the current timer count, computes the count difference since the last update, corrects for timer overflow, updates the cumulative position, and computes elapsed time.
+
+- `get_position()`  
+  Returns the total encoder position in counts.
+
+- `get_velocity()`  
+  Returns the wheel velocity in mm/s using the most recently computed count delta and elapsed time.
+
+- `zero()`  
+  Resets the position to zero and updates the internal reference count.
+
+---
+
+## Motor
+
+### Overview
+The `motor.py` file provides a motor driver interface for a DC motor driver that uses a PWM pin, a direction pin, and a sleep pin.
+
+### What it sets up
+The motor driver sets up:
+- a PWM output pin
+- a direction output pin
+- a sleep/enable output pin
+- a timer PWM channel for duty-cycle control
+
+### What data it takes in
+The driver takes in:
+- PWM pin
+- direction pin
+- sleep pin
+- timer object
+- timer channel number
+- requested motor effort from `-100` to `100`
+
+### Methods
+- `__init__(PWM, DIR, nSLP, tim, channel)`  
+  Creates the motor object and configures the PWM, direction, and sleep pins.
+
+- `set_effort(effort)`  
+  Applies a signed effort command. Positive values drive in one direction, negative values drive in the opposite direction, and out-of-range values result in zero PWM.
+
+- `enable()`  
+  Wakes the motor driver from sleep mode and sets PWM output to zero.
+
+- `disable()`  
+  Puts the motor driver into sleep mode.
+
+---
+
+## linesensor
+
+### Overview
+The `linesensor.py` file provides a driver for the 8-channel Pololu QTR-MD-08A analog line sensor. It reads raw ADC values, normalizes them using calibration data, and computes a weighted centroid.
+
+### What it sets up
+The line sensor driver sets up:
+- 8 ADC inputs
+- white calibration values
+- black calibration values
+- sensor index positions from 0 to 7
+- thresholds for line detection robustness
+
+### What data it takes in
+The driver takes in:
+- a list of 8 ADC-capable pins
+
+It also uses live ADC readings from each sensor channel.
+
+### Methods
+- `__init__(adc_pins)`  
+  Creates ADC objects for all 8 sensors and initializes calibration data.
+
+- `read_raw()`  
+  Returns the raw ADC readings from all 8 sensors.
+
+- `calibrate_white(n=50)`  
+  Samples the sensor multiple times over a white surface and stores average white calibration values.
+
+- `calibrate_black(n=50)`  
+  Samples the sensor multiple times over a black line and stores average black calibration values.
+
+- `norm_from_raw(raw)`  
+  Converts raw readings into normalized values between 0 and 1 using calibration data.
+
+- `read_norm()`  
+  Reads raw sensor values and returns normalized values.
+
+- `centroid_from_norm(w)`  
+  Computes the weighted centroid from normalized sensor values. Returns `None` if no confident line is detected.
+
+- `centroid()`  
+  Performs a full raw read, normalization, and centroid computation in one step.
+
+- `read_all()`  
+  Returns raw values, normalized values, and centroid together for debugging.
+
+---
+
+## IMU_Driver
+
+### Overview
+The `IMU_Driver.py` file implements an I2C driver for the BNO055 inertial measurement unit. It supports heading, Euler angles, gyro data, calibration status, and saving/loading calibration constants.
+
+### What it sets up
+The IMU driver sets up:
+- the I2C interface reference
+- the IMU address
+- an optional reset pin
+- register-level communication helpers
+- IMU operating mode and calibration functions
+
+### What data it takes in
+The driver takes in:
+- a previously created I2C object
+- an optional I2C address
+- an optional reset pin
+
+It reads data from:
+- heading registers
+- roll and pitch registers
+- gyro registers
+- calibration registers
+- chip ID and configuration registers
+
+### Methods
+- `__init__(i2c, address=DEFAULT_ADDR, rst_pin=None)`  
+  Creates the IMU driver object and stores references to the I2C bus and optional reset pin.
+
+- `read_chip_id()`  
+  Reads the BNO055 chip ID register.
+
+- `hw_reset()`  
+  Applies a hardware reset using the reset pin if one is connected.
+
+- `set_mode(mode)`  
+  Changes the BNO055 operating mode, such as IMU mode or NDOF mode.
+
+- `get_calib_status()`  
+  Returns the system, gyro, accelerometer, and magnetometer calibration status.
+
+- `read_calibration_data()`  
+  Reads the 22-byte calibration block from the IMU.
+
+- `write_calibration_data(calib_bytes)`  
+  Writes a 22-byte calibration block back to the IMU.
+
+- `save_calibration_to_file(filename="bno055_calib.bin")`  
+  Saves calibration bytes to a file.
+
+- `load_calibration_from_file(filename="bno055_calib.bin")`  
+  Loads calibration bytes from a file and writes them to the IMU.
+
+- `read_euler()`  
+  Returns heading, roll, and pitch in degrees.
+
+- `read_heading()`  
+  Returns just the heading in degrees.
+
+- `read_gyro()`  
+  Returns x, y, and z gyro rates in degrees per second.
+
+- `read_yaw_rate_dps()`  
+  Returns yaw rate in degrees per second.
+
+- `read_yaw_rate_rads()`  
+  Returns yaw rate in radians per second.
+
+---
+
+# ME405 Library Files
+
+## task_share
+
+### Overview
+The `task_share.py` file provides safe communication objects for sharing data between tasks. It contains two main classes:
+- `Share` for a single shared value
+- `Queue` for buffered FIFO data transfer
+
+These classes are designed to reduce data corruption risk when tasks exchange data, especially when interrupts may be involved.
+
+The file also maintains a system-wide list of all shares and queues for diagnostics.
+
+---
+
+## cotask
+
+### Overview
+The `cotask.py` file provides the cooperative multitasking framework used by the project.
+
+Its main purpose is to:
+- define tasks as generators
+- allow tasks to yield control back to the scheduler
+- schedule tasks based on period and priority
+- support both round-robin and priority-based scheduling
+- optionally profile execution timing
+- optionally trace state transitions
+
+The two main classes are:
+- `Task` for representing an individual scheduled task
+- `TaskList` for storing tasks and running the scheduler
+
+This file is the foundation that allows all of the robot tasks to run together without a full RTOS.
