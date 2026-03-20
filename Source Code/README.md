@@ -108,7 +108,7 @@ This task allows the user to:
 The user task is the main tuning and debugging interface for the robot.
 
 ### FSM
-*[Insert Task_User FSM image here]*
+![Insert Task_User FSM image here](https://github.com/Samuel-Nuno/Autonomous-Line-Following-Robot/blob/main/Reference%20Documentation/Images/User%20Task%20FSM.jpeg)
 
 ---
 
