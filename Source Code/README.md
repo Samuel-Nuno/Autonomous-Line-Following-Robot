@@ -61,7 +61,7 @@ The left and right drive system files implement the motor-side tasks for each wh
 These two files are nearly identical in structure, but they use different hardware pins and timers for the left and right motors.
 
 ### FSM
-*[Insert Left/Right Drive System FSM image here]*
+![Insert Left/Right Drive System FSM image here](https://github.com/Samuel-Nuno/Autonomous-Line-Following-Robot/blob/main/Reference%20Documentation/Images/Drive%20System%20FSM.jpg)
 
 ---
 
