@@ -18,7 +18,7 @@ This design separates sensing, control, and user interaction into modular finite
 ---
 
 ## Task Diagram
-*[Insert task diagram image here]*
+![Insert task diagram image here](https://github.com/Samuel-Nuno/Autonomous-Line-Following-Robot/blob/main/Reference%20Documentation/Images/User%20Task%20FSM.jpeg)
 
 ---
 
