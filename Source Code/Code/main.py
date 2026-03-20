@@ -51,7 +51,7 @@ bump_pressed = Share("B", name="Bump Pressed")
 
 # defaults
 lf_enable.put(0)
-lf_forwardV.put(200.0)
+lf_forwardV.put(250.0)
 leftMotorGo.put(0)
 rightMotorGo.put(0)
 spL.put(0)
@@ -64,7 +64,7 @@ posL.put(0)
 posR.put(0)
 
 # Queues
-# Keep these moderate to avoid RAM trouble
+# Keep moderate to avoid RAM trouble
 N_SAMPLES = 100
 N_CENTROID_SAMPLES = 100
 dataValuesL = Queue("f", N_SAMPLES, name="Left Velocity Buffer")
@@ -95,7 +95,7 @@ ctrlTask = Closed_Loop(
     posL_share=posL,
     posR_share=posR,
     lf_deadband=0.4,
-    lf_dv_turn=150,
+    lf_dv_turn=180,
     lf_lost_val=-1
 )
 
@@ -137,7 +137,7 @@ startTask = task_start_button(
     effR=effR,
     spL=spL,
     spR=spR,
-    start_speed=150.0
+    start_speed=220.0
 )
 
 # Scheduler
