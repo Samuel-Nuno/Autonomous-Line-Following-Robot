@@ -13,14 +13,10 @@ class IMU_Driver:
     - Read/write calibration coefficients (offsets/radii) for saving/loading
     """
 
-    # -----------------------------
     # I2C Address
-    # -----------------------------
     DEFAULT_ADDR = 0x28  # BNO055 default I2C addr (ADR pin low)
 
-    # -----------------------------
     # Core registers
-    # -----------------------------
     REG_CHIP_ID   = 0x00
     REG_PAGE_ID   = 0x07
 
@@ -30,9 +26,7 @@ class IMU_Driver:
 
     REG_CALIB_STAT = 0x35
 
-    # -----------------------------
     # Operating modes
-    # -----------------------------
     MODE_CONFIG = 0x00
     MODE_IMU    = 0x08   # accel+gyro fusion
     MODE_NDOF   = 0x0C   # full fusion (accel+gyro+mag)
@@ -40,25 +34,19 @@ class IMU_Driver:
     # Power modes
     PWR_NORMAL  = 0x00
 
-    # -----------------------------
     # Euler registers (Page 0, little-endian)
     # 1 deg = 16 LSB
-    # -----------------------------
     REG_EUL_HEADING_LSB = 0x1A
     REG_EUL_ROLL_LSB    = 0x1C
     REG_EUL_PITCH_LSB   = 0x1E
 
-    # -----------------------------
     # Gyro registers (Page 0, little-endian)
     # Units: 1 dps = 16 LSB
-    # -----------------------------
     REG_GYR_DATA_X_LSB  = 0x14
     # x: 0x14-0x15, y: 0x16-0x17, z: 0x18-0x19
 
-    # -----------------------------
     # Calibration data block (Page 0)
     # Offsets + radii total = 22 bytes starting at 0x55
-    # -----------------------------
     REG_CALIB_DATA_START = 0x55
     CALIB_DATA_LEN       = 22
 
@@ -75,9 +63,7 @@ class IMU_Driver:
 
         utime.sleep_ms(50)  # power-up delay
 
-    # -----------------------------
     # Low-level helpers
-    # -----------------------------
     def _read_bytes(self, start_reg, length):
         buf = bytearray(length)
         self._i2c.mem_read(buf, self._addr, start_reg)
@@ -96,9 +82,7 @@ class IMU_Driver:
             val -= 0x10000
         return val
 
-    # -----------------------------
     # Basic ID / reset / mode
-    # -----------------------------
     def read_chip_id(self):
         return self._read_bytes(self.REG_CHIP_ID, 1)[0]
 
@@ -130,9 +114,7 @@ class IMU_Driver:
         self._write_byte(self.REG_OPR_MODE, mode)
         utime.sleep_ms(25)
 
-    # -----------------------------
     # Calibration
-    # -----------------------------
     def get_calib_status(self):
         """
         Returns tuple: (sys, gyro, acc, mag) where each is 0..3
@@ -191,9 +173,7 @@ class IMU_Driver:
             data = f.read()
         self.write_calibration_data(data)
 
-    # -----------------------------
     # Euler angles
-    # -----------------------------
     def read_euler(self):
         """
         Returns (heading_deg, roll_deg, pitch_deg)
@@ -212,9 +192,7 @@ class IMU_Driver:
         h, _, _ = self.read_euler()
         return h
 
-    # -----------------------------
     # Gyro (angular rates)
-    # -----------------------------
     def read_gyro(self):
         """
         Returns (gx_dps, gy_dps, gz_dps)
