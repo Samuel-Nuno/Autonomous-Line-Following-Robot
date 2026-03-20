@@ -83,7 +83,7 @@ Its main responsibilities are:
 When line following is enabled, the controller does not simply use externally supplied setpoints. Instead, it uses the line centroid and desired forward speed to generate left and right setpoints automatically. If the line is lost for long enough, the controller enters a scripted recovery routine that drives forward, turns, and searches for the line again.
 
 ### FSM
-*[Insert Closed Loop FSM image here]*
+![Insert Closed Loop FSM image here](https://github.com/Samuel-Nuno/Autonomous-Line-Following-Robot/blob/main/Reference%20Documentation/Images/Closed%20Loop%20FSM.jpg)
 
 ---
 
