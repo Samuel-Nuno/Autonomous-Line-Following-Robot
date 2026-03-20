@@ -52,7 +52,7 @@ The line sensor is calibrated on both white background and black line surfaces. 
 ### [Bump Sensor](https://www.pololu.com/product/1405)
 The bump sensor is implemented as a **single limit switch**. This provides a simple and reliable method of detecting contact with obstacles or walls, allowing the robot to trigger recovery behavior when pressed.
 
-The bump sensor was mounted with a custom 3D printed part. The file can be found [here.]()
+The bump sensor was mounted with a custom 3D printed part. The file can be found [here.](https://github.com/Samuel-Nuno/Autonomous-Line-Following-Robot/blob/main/Reference%20Documentation/Bump%20Sensor%20Mount.step)
 
 ### [IMU (Inertial Measurement Unit)](https://learn.adafruit.com/adafruit-bno055-absolute-orientation-sensor/overview)
 
