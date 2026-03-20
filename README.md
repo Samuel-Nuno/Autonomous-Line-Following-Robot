@@ -119,5 +119,4 @@ A critical parameter in our implementation is the **conversion between encoder t
 Because this value is fixed in the code, accuracy in the encoder ticks-per-unit-length conversion is essential. Any error in this parameter directly affects velocity estimation, distance tracking, and overall control performance.
 
 ## Video Demonstration
-**Embedded video or link:**  
-![PASTE YOUR VIDEO LINK HERE](https://youtube.com/shorts/2tvsYlAGBHo?feature=share)
+(https://youtube.com/shorts/2tvsYlAGBHo?feature=share)
