@@ -120,4 +120,4 @@ Because this value is fixed in the code, accuracy in the encoder ticks-per-unit-
 
 ## Video Demonstration
 **Embedded video or link:**  
-[PASTE YOUR VIDEO LINK HERE]
+![PASTE YOUR VIDEO LINK HERE](https://youtube.com/shorts/2tvsYlAGBHo?feature=share)
